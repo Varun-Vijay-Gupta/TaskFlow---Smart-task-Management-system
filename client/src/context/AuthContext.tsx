@@ -13,11 +13,27 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   loginAsGuest: (name?: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const setSession = (
+  setUser: (user: User | null) => void,
+  token: string,
+  userData: { id: string; name: string; email?: string; isGuest: boolean }
+) => {
+  localStorage.setItem('taskflow_token', token);
+  setUser({
+    id: userData.id,
+    name: userData.name,
+    email: userData.email,
+    isGuest: userData.isGuest,
+  });
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -28,14 +44,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const login = useCallback(async (email: string, password: string) => {
+    const response = await api.login(email, password);
+    setSession(setUser, response.data.token, response.data.user);
+  }, []);
+
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      const response = await api.register(name, email, password);
+      setSession(setUser, response.data.token, response.data.user);
+    },
+    []
+  );
+
   const loginAsGuest = useCallback(async (name?: string) => {
     const response = await api.guestLogin(name);
-    localStorage.setItem('taskflow_token', response.data.token);
-    setUser({
-      id: response.data.user.id,
-      name: response.data.user.name,
-      isGuest: response.data.user.isGuest,
-    });
+    setSession(setUser, response.data.token, response.data.user);
   }, []);
 
   useEffect(() => {
@@ -67,6 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        login,
+        register,
         loginAsGuest,
         logout,
       }}

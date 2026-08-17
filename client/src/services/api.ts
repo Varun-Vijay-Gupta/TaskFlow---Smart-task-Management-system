@@ -35,6 +35,32 @@ class ApiClient {
     return data;
   }
 
+  async register(name: string, email: string, password: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        user: { id: string; name: string; email: string; isGuest: boolean };
+        token: string;
+      };
+    }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+    });
+  }
+
+  async login(email: string, password: string) {
+    return this.request<{
+      success: boolean;
+      data: {
+        user: { id: string; name: string; email: string; isGuest: boolean };
+        token: string;
+      };
+    }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
   async guestLogin(name?: string) {
     return this.request<{
       success: boolean;

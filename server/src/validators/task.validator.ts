@@ -1,13 +1,5 @@
 import { body, param, query } from 'express-validator';
 
-export const guestLoginValidation = [
-  body('name')
-    .optional()
-    .trim()
-    .isLength({ min: 1, max: 50 })
-    .withMessage('Name must be between 1 and 50 characters'),
-];
-
 export const createTaskValidation = [
   body('title')
     .trim()

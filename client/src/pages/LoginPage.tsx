@@ -1,18 +1,81 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Moon, Sun, ArrowRight, Sparkles } from 'lucide-react';
+import clsx from 'clsx';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
+type AuthMode = 'signin' | 'signup' | 'guest';
+
 export function LoginPage() {
+  const [mode, setMode] = useState<AuthMode>('signin');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [guestName, setGuestName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { loginAsGuest } = useAuth();
+  const { login, register, loginAsGuest } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+
+  const resetForm = () => {
+    setError('');
+    setName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setGuestName('');
+  };
+
+  const switchMode = (newMode: AuthMode) => {
+    resetForm();
+    setMode(newMode);
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await login(email.trim(), password);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sign in');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await register(name.trim(), email.trim(), password);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create account');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleGuestLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +94,6 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel - Illustration */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-primary-500 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-primary-500 to-primary-400" />
         <div className="absolute inset-0 opacity-10">
@@ -70,7 +132,7 @@ export function LoginPage() {
 
           <div className="space-y-4">
             {[
-              'Track tasks with real-time status updates',
+              'Sign up to save tasks permanently',
               'Filter, sort, and search effortlessly',
               'Light & dark themes for comfortable viewing',
             ].map((feature) => (
@@ -82,30 +144,9 @@ export function LoginPage() {
               </div>
             ))}
           </div>
-
-          {/* Decorative task cards illustration */}
-          <div className="mt-12 relative">
-            <div className="absolute -rotate-6 w-72 p-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-400" />
-                <div className="h-2 w-24 rounded bg-white/30" />
-              </div>
-              <div className="h-2 w-full rounded bg-white/20 mb-1.5" />
-              <div className="h-2 w-3/4 rounded bg-white/15" />
-            </div>
-            <div className="relative rotate-3 ml-8 mt-8 w-72 p-4 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 shadow-xl">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-amber-400" />
-                <div className="h-2 w-32 rounded bg-white/40" />
-              </div>
-              <div className="h-2 w-full rounded bg-white/25 mb-1.5" />
-              <div className="h-2 w-2/3 rounded bg-white/20" />
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
       <div className="flex-1 flex flex-col bg-bg-light dark:bg-bg-dark">
         <div className="flex justify-end p-4 md:p-6">
           <button
@@ -113,11 +154,7 @@ export function LoginPage() {
             className="p-2.5 rounded-xl border border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           >
-            {theme === 'light' ? (
-              <Moon size={18} />
-            ) : (
-              <Sun size={18} />
-            )}
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
         </div>
 
@@ -145,44 +182,161 @@ export function LoginPage() {
             </div>
 
             <h2 className="text-2xl md:text-3xl font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
-              Welcome back
+              {mode === 'signin'
+                ? 'Welcome back'
+                : mode === 'signup'
+                  ? 'Create an account'
+                  : 'Continue as guest'}
             </h2>
-            <p className="text-text-secondary-light dark:text-text-secondary-dark mb-8">
-              Sign in to manage your tasks or continue as a guest
+            <p className="text-text-secondary-light dark:text-text-secondary-dark mb-6">
+              {mode === 'signin'
+                ? 'Sign in to access your tasks'
+                : mode === 'signup'
+                  ? 'Sign up to save your tasks permanently'
+                  : 'Try TaskFlow without creating an account'}
             </p>
 
-            <form onSubmit={handleGuestLogin} className="space-y-5">
-              <Input
-                label="Display Name (Optional)"
-                placeholder="Enter your name or leave blank"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                hint="A random guest name will be assigned if left blank"
-              />
+            <div className="flex gap-1 p-1 mb-6 rounded-xl bg-gray-100 dark:bg-slate-800">
+              {(
+                [
+                  { id: 'signin' as const, label: 'Sign In' },
+                  { id: 'signup' as const, label: 'Sign Up' },
+                  { id: 'guest' as const, label: 'Guest' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => switchMode(tab.id)}
+                  className={clsx(
+                    'flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                    mode === tab.id
+                      ? 'bg-surface-light dark:bg-surface-dark text-primary-600 dark:text-primary-400 shadow-sm'
+                      : 'text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-              {error && (
-                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-danger">
-                  {error}
-                </div>
-              )}
+            {mode === 'signin' && (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                {error && <ErrorBox message={error} />}
+                <Button
+                  type="submit"
+                  size="lg"
+                  isLoading={isLoading}
+                  className="w-full"
+                  rightIcon={<ArrowRight size={18} />}
+                >
+                  Sign In
+                </Button>
+              </form>
+            )}
 
-              <Button
-                type="submit"
-                size="lg"
-                isLoading={isLoading}
-                className="w-full"
-                rightIcon={<ArrowRight size={18} />}
-              >
-                Continue as Guest
-              </Button>
-            </form>
+            {mode === 'signup' && (
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <Input
+                  label="Full Name"
+                  placeholder="Enter your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  autoComplete="name"
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
+                <Input
+                  label="Confirm Password"
+                  type="password"
+                  placeholder="Re-enter your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
+                {error && <ErrorBox message={error} />}
+                <Button
+                  type="submit"
+                  size="lg"
+                  isLoading={isLoading}
+                  className="w-full"
+                  rightIcon={<ArrowRight size={18} />}
+                >
+                  Create Account
+                </Button>
+              </form>
+            )}
 
-            <p className="mt-6 text-center text-xs text-text-secondary-light dark:text-text-secondary-dark">
-              Guest sessions are temporary. Your tasks are saved while you&apos;re logged in.
-            </p>
+            {mode === 'guest' && (
+              <form onSubmit={handleGuestLogin} className="space-y-4">
+                <Input
+                  label="Display Name (Optional)"
+                  placeholder="Enter your name or leave blank"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  hint="A random guest name will be assigned if left blank"
+                />
+                {error && <ErrorBox message={error} />}
+                <Button
+                  type="submit"
+                  size="lg"
+                  isLoading={isLoading}
+                  className="w-full"
+                  rightIcon={<ArrowRight size={18} />}
+                >
+                  Continue as Guest
+                </Button>
+                <p className="text-center text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                  Guest sessions are temporary. Sign up to keep your tasks permanently.
+                </p>
+              </form>
+            )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ErrorBox({ message }: { message: string }) {
+  return (
+    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-danger">
+      {message}
     </div>
   );
 }

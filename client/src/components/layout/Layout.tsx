@@ -1,3 +1,4 @@
+import { NavLink } from 'react-router-dom';
 import { Moon, Sun, Menu, X } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -5,11 +6,18 @@ import { getInitials } from '../../utils/taskHelpers';
 import clsx from 'clsx';
 
 interface HeaderProps {
+  title: string;
+  subtitle?: string;
   onMenuToggle?: () => void;
   isSidebarOpen?: boolean;
 }
 
-export function Header({ onMenuToggle, isSidebarOpen }: HeaderProps) {
+export function Header({
+  title,
+  subtitle,
+  onMenuToggle,
+  isSidebarOpen,
+}: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
 
@@ -25,11 +33,13 @@ export function Header({ onMenuToggle, isSidebarOpen }: HeaderProps) {
         </button>
         <div>
           <h1 className="text-lg md:text-xl font-semibold text-text-primary-light dark:text-text-primary-dark">
-            Dashboard
+            {title}
           </h1>
-          <p className="text-xs md:text-sm text-text-secondary-light dark:text-text-secondary-dark hidden sm:block">
-            Manage and track your tasks efficiently
-          </p>
+          {subtitle && (
+            <p className="text-xs md:text-sm text-text-secondary-light dark:text-text-secondary-dark hidden sm:block">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
 
@@ -56,7 +66,7 @@ export function Header({ onMenuToggle, isSidebarOpen }: HeaderProps) {
                 {user.name}
               </p>
               <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                {user.isGuest ? 'Guest User' : 'Member'}
+                {user.isGuest ? 'Guest User' : user.email || 'Member'}
               </p>
             </div>
             <button
@@ -75,15 +85,14 @@ export function Header({ onMenuToggle, isSidebarOpen }: HeaderProps) {
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeNav: string;
 }
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { id: 'tasks', label: 'My Tasks', icon: '✅' },
+  { to: '/dashboard', label: 'Dashboard', icon: '📊' },
+  { to: '/tasks', label: 'My Tasks', icon: '✅' },
 ];
 
-export function Sidebar({ isOpen, onClose, activeNav }: SidebarProps) {
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       {isOpen && (
@@ -124,19 +133,22 @@ export function Sidebar({ isOpen, onClose, activeNav }: SidebarProps) {
 
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map((item) => (
-            <button
-              key={item.id}
+            <NavLink
+              key={item.to}
+              to={item.to}
               onClick={onClose}
-              className={clsx(
-                'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer',
-                activeNav === item.id
-                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                  : 'text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-slate-800'
-              )}
+              className={({ isActive }) =>
+                clsx(
+                  'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                    : 'text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-slate-800'
+                )
+              }
             >
               <span>{item.icon}</span>
               {item.label}
-            </button>
+            </NavLink>
           ))}
         </nav>
       </aside>
